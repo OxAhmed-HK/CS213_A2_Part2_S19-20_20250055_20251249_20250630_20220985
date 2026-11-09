@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include "Memory.h"
+#include "Instruction.h" // أضفنا ترويسة Instruction للتأكد من توفر isValidWord
 
 class ProgramLoader {
 private:
@@ -19,4 +20,4 @@ public:
     std::string getLastError() const;
 };
 
-#endif 
+#endif

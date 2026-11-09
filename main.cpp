@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <limits>
+#include <fstream>
 #include "Simulator.h"
 
 void displayMenu() {
@@ -20,7 +21,27 @@ void clearInputBuffer() {
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
+void pauseScreen() {
+    std::cout << "\n[ Press Enter to continue and take screenshot... ]";
+    std::cin.get();
+}
+
 int main() {
+    // إنشاء ملفات البرامج وتأكيد إغلاقها لضمان قراءتها بنجاح
+    std::ofstream f5("program5.txt");
+    f5 << "2105\n2203\n5312\n33C0\nC000\n";
+    f5.close();
+
+    std::ofstream f6("program6.txt");
+    f6 << "210A\n2202\n6312\n33C1\nC000\n";
+    f6.close();
+
+    std::ofstream f7("program7.txt");
+    f7 << "11FF\nC000\n";
+    f7.close();
+
+    std::cout << "Files created successfully in current directory!\n";
+
     Simulator sim;
     int choice = 0;
 
@@ -31,6 +52,8 @@ int main() {
             clearInputBuffer();
             continue;
         }
+        
+        clearInputBuffer();
 
         switch (choice) {
             case 1: {
@@ -44,6 +67,7 @@ int main() {
                     clearInputBuffer();
                     break;
                 }
+                clearInputBuffer();
 
                 if (sim.loadProgramFile(filename, startAddress)) {
                     std::cout << "Program loaded successfully!\n";
@@ -51,16 +75,17 @@ int main() {
                 } else {
                     std::cout << "Error loading program: " << sim.getErrorMessage() << "\n";
                 }
+                pauseScreen();
                 break;
             }
             case 2:
                 std::cout << "Running program continuously...\n";
                 sim.runAll();
                 sim.displayMachineState();
+                pauseScreen();
                 break;
             case 3: {
                 std::cout << "Executing step by step. Press [Enter] after each step (Type 'q' then Enter to quit step mode).\n";
-                clearInputBuffer();
                 while (sim.getStatus() == READY || sim.getStatus() == RUNNING) {
                     sim.step();
                     sim.displayMachineState();
@@ -84,6 +109,7 @@ int main() {
                     clearInputBuffer();
                     break;
                 }
+                clearInputBuffer();
 
                 if (editType == 1) {
                     int reg, val;
@@ -99,6 +125,7 @@ int main() {
                         clearInputBuffer();
                         break;
                     }
+                    clearInputBuffer();
                     sim.editRegister(reg, static_cast<uint8_t>(val));
                     std::cout << "Register updated successfully.\n";
                 } 
@@ -107,7 +134,6 @@ int main() {
                     std::cout << "Enter Memory Address in hex (00-FF): ";
                     if (!(std::cin >> std::hex >> addr >> std::dec) || addr < 0 || addr > 255) {
                         std::cout << "Error: Memory address must be between 00 and FF.\n";
-                        clearInputBuffer();
                         break;
                     }
                     if (addr == 0xFF) {
@@ -119,26 +145,31 @@ int main() {
                         std::cout << "Error: Value must be between 00 and FF.\n";
                         break;
                     }
+                    clearInputBuffer();
                     sim.editMemoryCell(addr, static_cast<uint8_t>(val));
                     std::cout << "Memory cell updated successfully.\n";
                 } else {
                     std::cout << "Invalid edit option.\n";
                 }
                 sim.displayMachineState();
+                pauseScreen();
                 break;
             }
             case 5:
                 sim.displayMachineState();
+                pauseScreen();
                 break;
             case 6:
                 sim.reset();
                 std::cout << "Simulator reset successfully.\n";
+                pauseScreen();
                 break;
             case 7:
                 std::cout << "Exiting simulator. Goodbye!\n";
                 break;
             default:
                 std::cout << "Invalid choice! Please select a number between 1 and 7.\n";
+                pauseScreen();
         }
     } while (choice != 7);
 

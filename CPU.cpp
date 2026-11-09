@@ -1,23 +1,20 @@
 #include "CPU.h"
-#include <iomanip>
-#include <sstream>
 
 using namespace std;
 
 CPU::CPU(Memory& memoryRef, Screen& screenRef)
-    : memory(memoryRef),
-      screen(screenRef),
-      programCounter(0),
-      instructionRegister(0),
-      halted(false),
-      lastError("") {
+        : memory(memoryRef), screen(screenRef), programCounter(0), instructionRegister(0),
+        halted(false)
+{
     reset(0);
 }
 
 void CPU::reset(int startAddress) {
-    for (int i = 0; i < 16; ++i) {
+
+    for (int i = 0; i < 16; i++) {
         registers[i] = 0;
     }
+
     programCounter = startAddress & 0xFF;
     instructionRegister = 0;
     halted = false;
@@ -25,16 +22,13 @@ void CPU::reset(int startAddress) {
 }
 
 bool CPU::fetch() {
-    if (programCounter < 0 || programCounter >= 0xFF) {
-        ostringstream oss;
-        oss << "Fetch error: Program Counter (0x"
-            << uppercase << hex << setw(2) << setfill('0')
-            << programCounter << ") cannot fetch a 2-byte instruction.";
-        lastError = oss.str();
+
+    if (programCounter > 0xFD || programCounter % 2 != 0) {
+        lastError = "Fetch error, invalid programCounter";
         return false;
     }
 
-    instructionRegister = static_cast<int>(memory.readWord(programCounter));
+    instructionRegister = memory.readWord(programCounter);
     programCounter += 2;
     return true;
 }
@@ -43,23 +37,17 @@ Instruction CPU::decode() const {
     return Instruction(static_cast<uint16_t>(instructionRegister & 0xFFFF));
 }
 
-
 ExecResult CPU::execute(Instruction instr) {
     if (!Instruction::isValidWord(instr.getWord())) {
-        ostringstream oss;
-        oss << "Invalid instruction 0x"
-            << uppercase << hex << setw(4) << setfill('0')
-            << instr.getWord() << " at address 0x"
-            << setw(2) << (programCounter - 2) << ".";
-        lastError = oss.str();
+        lastError = "Invalid Instruction";
         return ExecResult::ERROR;
     }
 
     int opcode = instr.getOpcode();
-    int r      = instr.getR();
-    int s      = instr.getS();
-    int t      = instr.getT();
-    int xy     = instr.getXY();
+    int r = instr.getR();
+    int s = instr.getS();
+    int t = instr.getT();
+    int xy = instr.getXY();
 
     switch (opcode) {
         case 0x1:
@@ -72,9 +60,10 @@ ExecResult CPU::execute(Instruction instr) {
 
         case 0x3:
             if (xy == 0xFF) {
-                screen.write(static_cast<uint8_t>(registers[r] & 0xFF));
-            } else {
-                memory.writeByte(xy, static_cast<uint8_t>(registers[r] & 0xFF));
+                screen.write(static_cast<uint8_t>(registers[r]));
+            }
+            else {
+                memory.writeByte(xy, static_cast<uint8_t>(registers[r]));
             }
             return ExecResult::CONTINUE;
 
@@ -82,15 +71,16 @@ ExecResult CPU::execute(Instruction instr) {
             registers[t] = registers[s];
             return ExecResult::CONTINUE;
 
+
         case 0x5:
-            registers[r] = alu.addTwosComplement(registers[s], registers[t]);
+            registers[r] = alu.addTwosComplement(registers[s],registers[t]);
             return ExecResult::CONTINUE;
 
         case 0x6:
-            registers[r] = alu.addFloatingPoint(registers[s], registers[t]);
+            registers[r] = alu.addFloatingPoint(registers[s],registers[t]);
             return ExecResult::CONTINUE;
 
-        case 0x7: // 7RST: Bitwise OR registers S and T, store in R
+        case 0x7:
             registers[r] = alu.bitwiseOr(registers[s], registers[t]);
             return ExecResult::CONTINUE;
 
@@ -107,7 +97,11 @@ ExecResult CPU::execute(Instruction instr) {
             return ExecResult::CONTINUE;
 
         case 0xB:
-            if ((registers[r] & 0xFF) == (registers[0] & 0xFF)) {
+            if (registers[r] == registers[0]) {
+                if (xy > 0xFD || xy % 2 != 0) {
+                    lastError = "Invalid Address";
+                    return ExecResult::ERROR;
+                }
                 programCounter = xy;
             }
             return ExecResult::CONTINUE;
@@ -117,8 +111,9 @@ ExecResult CPU::execute(Instruction instr) {
             return ExecResult::HALTED;
 
         default:
-            lastError = "Unsupported opcode encountered.";
+            lastError = "Invalid opcode";
             return ExecResult::ERROR;
+
     }
 }
 
@@ -126,44 +121,49 @@ StepResult CPU::stepCycle() {
     if (halted) {
         return StepResult::Halted;
     }
-
     if (!fetch()) {
         return StepResult::Error;
     }
 
-    Instruction instr = decode();
-    ExecResult result = execute(instr);
+    Instruction instruction = decode();
 
-    switch (result) {
+    ExecResult execResult = execute(instruction);
+
+    switch (execResult) {
         case ExecResult::CONTINUE:
             return StepResult::Running;
+
         case ExecResult::HALTED:
             return StepResult::Halted;
+
         case ExecResult::ERROR:
+            return StepResult::Error;
+
         default:
             return StepResult::Error;
     }
 }
 
-int CPU::getRegister(int idx) const {
-    if (idx < 0 || idx > 15) {
+int CPU::getRegister(int reg) const {
+    if (reg < 0 || reg > 15) {
         return 0;
     }
-    return registers[idx] & 0xFF;
+    return registers[reg];
 }
 
-void CPU::setRegister(int idx, int val) {
-    if (idx >= 0 && idx <= 15) {
-        registers[idx] = val & 0xFF;
+void CPU::setRegister(int reg, int value) {
+    if (reg < 0 || reg > 15) {
+        return;
     }
+    registers[reg] = value & 0xFF;
 }
 
 int CPU::getPC() const {
     return programCounter;
 }
 
-void CPU::setPC(int addr) {
-    programCounter = addr & 0xFF;
+void CPU::setPC(int value) {
+    programCounter = value & 0xFF;
 }
 
 int CPU::getIR() const {

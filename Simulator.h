@@ -2,6 +2,7 @@
 #define SIMULATOR_H
 
 #include "Memory.h"
+#include "Screen.h"
 #include "CPU.h"
 #include "ProgramLoader.h"
 #include <string>
@@ -16,6 +17,7 @@ enum MachineStatus {
 class Simulator {
 private:
     Memory memory;
+    Screen screen;
     CPU cpu;
     ProgramLoader loader;
     MachineStatus status;
@@ -37,4 +39,4 @@ public:
     std::string getErrorMessage() const;
 };
 
-#endif // SIMULATOR_H
+#endif 

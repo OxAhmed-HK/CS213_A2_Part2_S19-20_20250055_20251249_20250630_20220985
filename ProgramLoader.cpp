@@ -36,11 +36,13 @@ bool ProgramLoader::loadProgram(const std::string& file, int startAddress, Memor
     std::vector<uint16_t> instructions;
 
     while (std::getline(infile, line)) {
+        // تجاهل التعليقات بعد ';'
         size_t commentPos = line.find(';');
         if (commentPos != std::string::npos) {
             line = line.substr(0, commentPos);
         }
         
+        // إزالة المسافات الزائدة
         line.erase(line.begin(), std::find_if(line.begin(), line.end(), [](unsigned char ch) {
             return !std::isspace(ch);
         }));
@@ -50,6 +52,7 @@ bool ProgramLoader::loadProgram(const std::string& file, int startAddress, Memor
 
         if (line.empty()) continue;
 
+        // التحقق من أن التعليمة تتكون من 4 خانات Hex بالضبط
         if (line.length() != 4) {
             lastError = "Invalid instruction format (must be exactly 4 hex digits): " + line;
             infile.close();
@@ -65,11 +68,20 @@ bool ProgramLoader::loadProgram(const std::string& file, int startAddress, Memor
         }
 
         uint16_t instrValue = static_cast<uint16_t>(std::stoi(line, nullptr, 16));
+
+        // **التعديل الجوهري المطلوب:** التحقق من صلاحية التعليمة عبر Instruction::isValidWord قبل قبولها
+        if (!Instruction::isValidWord(instrValue)) {
+            lastError = "Rejected: Invalid instruction opcode/format -> " + line;
+            infile.close();
+            return false;
+        }
+
         instructions.push_back(instrValue);
     }
 
     infile.close();
 
+    // التحقق من حدود البرنامج ألا يتجاوز العنوان FE (لأن FF محجوز للشاشة)
     if (startAddress + (static_cast<int>(instructions.size()) * 2) > 0xFF) {
         lastError = "Program size exceeds memory limit!";
         return false;

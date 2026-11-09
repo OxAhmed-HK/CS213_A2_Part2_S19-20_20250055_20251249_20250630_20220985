@@ -3,9 +3,8 @@
 
 #include <cstdint>
 
-using namespace std;
-
-class Memory {
+class Memory
+{
 private:
     uint8_t cells[256];
 
@@ -14,8 +13,10 @@ public:
 
     uint8_t readByte(int address) const;
     void writeByte(int address, uint8_t value);
+
     uint16_t readWord(int address) const;
     void writeWord(int address, uint16_t word);
+
     void clear();
 };
 
